@@ -1,0 +1,79 @@
+# from flask import Flask, request, render_template, session, redirect, url_for
+# import os
+
+# app = Flask(__name__)
+# app.secret_key = "secret_key_for_session"  # Secret key for session management
+
+# UPLOAD_FOLDER = 'uploaded_documents'
+# os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# # List of required documents
+# REQUIRED_DOCUMENTS = [
+#     "Proof of Admission",
+#     "Course Fee Structure",
+#     "Academic Records",
+#     "Proof of Identity and Address",
+#     "Income Proof",
+#     "Collateral (if required)"
+# ]
+
+# @app.route('/')
+# def introduction():
+#     session['doc_index'] = 0  # Reset document index at the start
+#     return redirect(url_for('display_steps'))
+
+# @app.route('/steps', methods=['GET', 'POST'])
+# def display_steps():
+#     if request.method == 'POST':  # Proceed only after clicking the button
+#         return redirect(url_for('upload_document'))
+    
+#     # Display the loan application steps with the "Understood and Proceed" button
+#     steps = """
+#         <h3>To apply for an education loan, you need to follow these steps:</h3>
+#         <ol>
+#             <li><b>Check Eligibility:</b> You should have secured admission to a recognized institution in India or abroad. A co-applicant (parent or guardian) may be required.</li>
+#             <li><b>Choose the Loan Type:</b> We offer both secured (with collateral) and unsecured (without collateral) loans. Loan amounts and interest rates vary accordingly.</li>
+#             <li><b>Submit Required Documents:</b> This includes identity proof, admission letter, fee structure, income proof of the co-applicant, and collateral documents (if applicable).</li>
+#             <li><b>Loan Processing & Approval:</b> Once we verify the documents and eligibility, we will assess your loan application. If approved, a sanction letter will be issued.</li>
+#             <li><b>Loan Disbursement:</b> Upon signing the loan agreement, the loan amount will be disbursed directly to the educational institution.</li>
+#             <li><b>Repayment Terms:</b> Repayment typically begins after a moratorium period (course duration + 6-12 months). We provide flexible EMI options to make repayment easier.</li>
+#         </ol>
+#         <form method='POST'>
+#             <button type='submit'>Understood and Proceed</button>
+#         </form>
+#     """
+#     return steps
+
+# @app.route('/upload', methods=['GET', 'POST'])
+# def upload_document():
+#     doc_index = session.get('doc_index', 0)  # Get the current document index
+
+#     if doc_index >= len(REQUIRED_DOCUMENTS):
+#         return "<h3>All documents uploaded successfully!</h3>"
+
+#     current_document = REQUIRED_DOCUMENTS[doc_index]
+
+#     if request.method == 'POST':
+#         uploaded_file = request.files['document']
+#         if uploaded_file:
+#             # Save the uploaded document
+#             file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
+#             uploaded_file.save(file_path)
+#             # Move to the next document
+#             session['doc_index'] = doc_index + 1
+#             return redirect(url_for('upload_document'))
+#         else:
+#             return "<h3>Please upload the document!</h3>"
+
+#     # Render the document upload form
+#     return f"""
+#         <h3>Please upload: {current_document}</h3>
+#         <form method="POST" enctype="multipart/form-data">
+#             <input type="file" name="document" required>
+#             <button type="submit">Upload</button>
+#         </form>
+#     """
+
+# if __name__ == '__main__':
+#     app.run(debug=True)

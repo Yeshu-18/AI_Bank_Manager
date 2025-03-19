@@ -1,0 +1,95 @@
+from flask import Flask, request, session, redirect, url_for, render_template_string
+import os
+
+app = Flask(__name__)
+app.secret_key = "chatbot_secret_key"  # Secret key for session management
+
+UPLOAD_FOLDER = 'uploaded_documents'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Define the chatbot flow with OCR-required documents
+# Define the chatbot flow with separate document steps
+CHATBOT_FLOW = [
+    {"type": "text", "content": "Welcome to the Education Loan Application Chatbot! Let's proceed step by step."},
+    {"type": "text", "content": "To apply for an education loan, you need to follow these steps:\n1. Check Eligibility: Secure admission to a recognized institution.\n2. Choose Loan Type: Secured (with collateral) or Unsecured (without collateral).\n3. Submit Required Documents: Identity proof, 10th, 12th, and (if applicable) UG certificates."},
+    {"type": "document", "content": "Please upload your Aadhaar Card for identity and address proof."},
+    {"type": "document", "content": "Please upload your PAN Card for tax and identity verification."},
+    {"type": "document", "content": "Please upload your 10th Certificate."},
+    {"type": "document", "content": "Please upload your 12th Certificate."},
+    {"type": "optional_document", "content": "Please upload your UG Certificate if applicable. You can also skip this step."},
+    {"type": "document", "content": "Please upload your Course Fee Structure for total course fees and payment deadlines."},
+    {"type": "document", "content": "Please upload your Academic Records."},
+    {"type": "document", "content": "Please upload your Income Proof to assess your repayment capacity."},
+    {"type": "document", "content": "Please upload any Collateral Documents, if required."},
+    {"type": "text", "content": "Thank you! All steps are completed. Your application will now be processed."}
+]
+
+@app.route('/', methods=['GET', 'POST'])
+def chatbot():
+    # Initialize session variables
+    if 'step' not in session:
+        session['step'] = 0
+
+    step = session['step']
+
+    # If all steps are completed
+    if step >= len(CHATBOT_FLOW):
+        session.clear()  # Clear session after completion
+        return "<h3>Thank you for using the chatbot. Your application is being processed!</h3>"
+
+    # Get the current step content
+    current_step = CHATBOT_FLOW[step]
+
+    # Handle POST request for file uploads or skipping
+    if request.method == 'POST':
+        if current_step["type"] == "document" or current_step["type"] == "optional_document":
+            if "skip" not in request.form:  # Check if the user skipped the step
+                uploaded_file = request.files.get('document')
+                if uploaded_file:
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_file.filename)
+                    uploaded_file.save(file_path)
+        # Move to the next step
+        session['step'] += 1
+        return redirect('/')
+
+    # Render the chatbot interface for the current step
+    if current_step["type"] == "text":
+        content = f"<p>{current_step['content']}</p><form method='POST'><button type='submit'>Next</button></form>"
+    elif current_step["type"] == "document":
+        content = f"""
+            <p>{current_step['content']}</p>
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="document" required>
+                <button type="submit">Upload</button>
+            </form>
+        """
+    elif current_step["type"] == "optional_document":
+        content = f"""
+            <p>{current_step['content']}</p>
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="document">
+                <button type="submit">Upload</button>
+            </form>
+            <form method="POST">
+                <button type="submit" name="skip" value="true">Skip</button>
+            </form>
+        """
+
+    # Dynamically generate and render the chatbot UI
+    return render_template_string(f"""
+        <html>
+        <head>
+            <title>Chatbot</title>
+        </head>
+        <body>
+            <h2>Education Loan Chatbot</h2>
+            <div style="border: 1px solid #ccc; padding: 15px; margin: 20px; border-radius: 10px;">
+                {content}
+            </div>
+        </body>
+        </html>
+    """)
+
+if __name__ == '__main__':
+    app.run(debug=True)

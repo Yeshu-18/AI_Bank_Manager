@@ -1,0 +1,49 @@
+{
+    "Full Name": "John Doe",
+    "DOB": "01/01/1990",
+    "Gender": "Male",
+    "Aadhaar Number": "1234 5678 9012",
+    "Address": "123, ABC Street, XYZ City, Country"
+}{
+    "aadhaar_document.pdf": {
+        "Aadhaar Number": "1234 5678 9012",
+        "PAN Number": "Not Found",
+        "DOB": "01/01/1990",
+        "Full Name": "Full Name: John Doe DOB"
+    }
+}{
+    "pan_document.pdf": {
+        "Aadhaar Number": "Not Found",
+        "PAN Number": "ABCDE1234F",
+        "DOB": "01/01/1990",
+        "Full Name": "Full Name: John Doe DOB"
+    }
+}{
+    "10th_cert_document.pdf": {
+        "Aadhaar Number": "Not Found",
+        "PAN Number": "Not Found",
+        "DOB": "01/01/1990",
+        "Full Name": "Full Name: John Doe DOB"
+    }
+}{
+    "10th_cert_document.pdf": {
+        "Aadhaar Number": "Not Found",
+        "PAN Number": "Not Found",
+        "DOB": "01/01/1990",
+        "Full Name": "Full Name: John Doe DOB"
+    }
+}{
+    "12th_cert_document.pdf": {
+        "Aadhaar Number": "Not Found",
+        "PAN Number": "Not Found",
+        "DOB": "01/01/1990",
+        "Full Name": "Full Name: John Doe DOB"
+    }
+}{
+    "collateral_document.pdf": {
+        "Aadhaar Number": "Not Found",
+        "PAN Number": "Not Found",
+        "DOB": "5000",
+        "Full Name": "Not Found"
+    }
+}

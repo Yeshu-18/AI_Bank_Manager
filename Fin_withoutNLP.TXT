@@ -1,0 +1,100 @@
+from flask import Flask, request, session, redirect, render_template_string
+import os
+
+app = Flask(__name__)
+app.secret_key = "chatbot_secret_key"
+
+UPLOAD_FOLDER = 'uploaded_documents'
+VIDEO_UPLOAD_FOLDER = 'uploaded_videos'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(VIDEO_UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['VIDEO_UPLOAD_FOLDER'] = VIDEO_UPLOAD_FOLDER
+
+FAQ_DATA = {
+    "What documents are required?": "You need to upload Aadhaar, PAN card, academic certificates, and income proof.",
+    "What is the interest rate for loans?": "Interest rates vary depending on the loan type. Please contact your branch for specific details.",
+    "What are the repayment options?": "Repayment typically starts after a moratorium period (course duration + 6 months). Flexible EMI options are available.",
+    "How long does it take to process the loan?": "Loan applications are typically processed within 7-10 business days after submitting all required documents."
+}
+
+CHATBOT_FLOW = [
+    {"type": "text", "content": "Welcome to the Education Loan Application Chatbot! Let's proceed step by step."},
+    {"type": "document", "content": "Please upload your Aadhaar Card for identity proof."},
+    {"type": "document", "content": "Please upload your PAN Card."},
+    {"type": "text", "content": "Thank you! Click proceed to upload your video proof."}
+]
+
+@app.route('/', methods=['GET'])
+def main_menu():
+    content = """
+        <h2>Welcome to the Education Loan Application System!</h2>
+        <p>Please select one of the following options:</p>
+        <ul>
+            <li><a href="/query">Ask a Question</a> - Get answers to your education loan-related queries.</li>
+            <li><a href="/chatbot">Proceed with Loan Application</a> - Start applying for your education loan step by step.</li>
+        </ul>
+    """
+    return render_template_string(content)
+
+@app.route('/query', methods=['POST', 'GET'])
+def query_chatbot():
+    if request.method == 'POST':
+        user_query = request.form.get('user_query')
+        response = FAQ_DATA.get(user_query, "I'm sorry, I don't have an answer for that. Please contact customer support.")
+        return render_template_string(f"""
+            <h3>Your Question:</h3>
+            <p>{user_query}</p>
+            <h3>Answer:</h3>
+            <p>{response}</p>
+            <a href="/query">Ask Another Question</a> | <a href="/">Back to Main Menu</a>
+        """)
+    return render_template_string("""
+        <h2>Ask a Question</h2>
+        <form method="POST">
+            <input type="text" name="user_query" placeholder="Type your question here" required>
+            <button type="submit">Ask</button>
+        </form>
+        <hr>
+        <a href="/">Back to Main Menu</a>
+    """)
+
+@app.route('/chatbot', methods=['GET', 'POST'])
+def chatbot():
+    if 'step' not in session:
+        session['step'] = 0
+    step = session['step']
+    if step >= len(CHATBOT_FLOW):
+        return redirect('/video_upload')
+    current_step = CHATBOT_FLOW[step]
+    if request.method == 'POST':
+        session['step'] += 1
+        return redirect('/chatbot')
+    return render_template_string(f"""
+        <h2>Education Loan Chatbot</h2>
+        <p>{current_step['content']}</p>
+        <form method="POST">
+            <button type="submit">Next</button>
+        </form>
+        <a href="/">Back to Main Menu</a>
+    """)
+
+@app.route('/video_upload', methods=['GET', 'POST'])
+def video_upload():
+    if request.method == 'POST':
+        uploaded_video = request.files.get('video_proof')
+        if uploaded_video:
+            file_path = os.path.join(app.config['VIDEO_UPLOAD_FOLDER'], uploaded_video.filename)
+            uploaded_video.save(file_path)
+            return "<h3>Video uploaded successfully. Your application will now be reviewed.</h3>"
+    return render_template_string("""
+        <h2>Upload Video Proof</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="video_proof" required>
+            <button type="submit">Upload</button>
+        </form>
+        <a href="/">Back to Main Menu</a>
+    """)
+
+if __name__ == '__main__':
+    app.run(debug=True)
