@@ -550,7 +550,6 @@
     
     
     
-
 from flask import Flask, request, session, redirect, render_template_string
 import os
 import json
@@ -577,7 +576,7 @@ CHATBOT_FLOW = [
     {"type": "document", "content": "Please upload your 12th Certificate."},
     {"type": "optional_document", "content": "Please upload your UG Certificate if applicable. You can also skip this step."},
     {"type": "document", "content": "Please upload your Course Fee Structure for total course fees and payment deadlines."},
-    {"type": "document", "content": "Please upload your Income Proof to assess your repayment capacity."},
+    # {"type": "document", "content": "Please upload your Income Proof to assess your repayment capacity."},
     {"type": "document", "content": "Please upload any Collateral Documents, if required."},
     {"type": "video", "content": "Please record and upload a video statement confirming all documents submitted and explaining your need for the education loan."},
     {"type": "video", "content": "Please upload a video for KYC verification, showing identity proof and confirming address details."},
@@ -585,8 +584,8 @@ CHATBOT_FLOW = [
     {"type": "video", "content": "Please upload a video agreement, where the applicant and co-applicant verbally agree to loan terms."},
     {"type": "video", "content": "Please upload a video disbursement request, confirming continued education and requesting the next installment."},
     {"type": "video", "content": "Please upload an affidavit video declaring no past loan defaults and confirming provided details are accurate."},
-    {"type": "video", "content": "Please upload a collateral confirmation video showing pledged property or security."},
-    {"type": "text", "content": "Thank you! All steps are completed. Your application will now be processed."}
+    {"type": "video", "content": "Please upload a collateral confirmation video showing pledged property or security."}
+    # {"type": "text", "content": "Thank you! All steps are completed. Your application will now be processed."}
 ]
 
 # Helper function to save files to disk and JSON
@@ -794,12 +793,46 @@ def chatbot():
 
     step = session['step']
 
-    # If all steps are completed, automatically restart the process
+    # If all steps are completed, display the eligibility message
     if step >= len(CHATBOT_FLOW):
         session.clear()  # Clear session to restart the process
-        return redirect('/')  # Redirect to the first step
+        eligibility_message = "<h3>You are eligible to apply!</h3>"  # Eligibility message
+        return render_template_string(f"""
+        <html>
+        <head>
+            <title>Education Loan Chatbot</title>
+            <style>
+                /* Add your styling here */
+                body {{
+                    font-family: Arial, sans-serif;
+                    background-color: #f4f4f9;
+                    margin: 0;
+                    padding: 0;
+                }}
+                h2 {{
+                    text-align: center;
+                    margin-top: 20px;
+                    color: #2e3b4e;
+                }}
+                .container {{
+                    width: 60%;
+                    margin: auto;
+                    background-color: #fff;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                }}
+            </style>
+        </head>
+        <body>
+            <h2>Education Loan Chatbot</h2>
+            <div class="container">
+                {eligibility_message}
+            </div>
+        </body>
+        </html>
+        """)  # Display the eligibility message
 
-    # Current step based on the flow
     current_step = CHATBOT_FLOW[step]
     extracted_data = session.get("extracted_data", {})  # Retrieve stored extracted data
 
@@ -812,34 +845,50 @@ def chatbot():
         content = f"<p>{current_step['content']}</p>"
 
     elif current_step["type"] == "video":
-        content = f"""
-            <p>{current_step['content']}</p>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="file" name="video" accept="video/*" required>
-                <button type="submit">Upload Video</button>
-            </form>
-        """
-        if video_preview_url:
-            content += f"""
-                <h3>Video Preview:</h3>
-                <video width="320" height="240" controls>
-                    <source src="{video_preview_url}" type="video/mp4">
+        if "video_url" in current_step:
+            content = f"""
+                <p>{current_step['content']}</p>
+                <video width='640' height='360' controls>
+                    <source src='{current_step['video_url']}' type='video/mp4'>
                     Your browser does not support the video tag.
                 </video>
+                <div style='margin-top: 10px;'>
+                    <button id='toggle-summary' onclick='toggleSummary()' class="btn">Summarise</button>
+                    <div id='summary' style='display:none; margin-top: 10px;'>
+                        <p>{current_step['summary_content']}</p>
+                    </div>
+                </div>
+                <form method='POST'>
+                    <button type='submit' name='next' value='true' class="btn primary">Next</button>
+                </form>
+                <script>
+                    function toggleSummary() {{
+                        var summary = document.getElementById('summary');
+                        summary.style.display = summary.style.display === 'none' ? 'block' : 'none';
+                    }}
+                </script>
+            """
+        else:
+            content = f"""
+                <p>{current_step['content']}</p>
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="file" name="video" accept="video/*" required class="input">
+                    <button type="submit" class="btn primary">Upload Video</button>
+                </form>
             """
 
     elif current_step["type"] in ["document", "optional_document"]:
         content = f"""
             <p>{current_step['content']}</p>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="file" name="document" required>
-                <button type="submit">Upload</button>
+            <form method="POST" enctype="multipart/form-data" class="upload-form">
+                <input type="file" name="document" required class="input">
+                <button type="submit" class="btn primary">Upload</button>
             </form>
         """
         if current_step["type"] == "optional_document":
             content += """
                 <form method="POST">
-                    <button type="submit" name="skip" value="true">Skip</button>
+                    <button type="submit" name="skip" value="true" class="btn secondary">Skip</button>
                 </form>
             """
 
@@ -890,22 +939,119 @@ def chatbot():
     if show_next_button or step == 0:
         content += """
             <form method="POST">
-                <button type="submit" name="next" value="true">Next</button>
+                <button type="submit" name="next" value="true" class="btn primary">Next</button>
             </form>
         """
 
+    # Calculate progress bar width
+    total_steps = len(CHATBOT_FLOW)
+    progress = (step / total_steps) * 100
+
     return render_template_string(f"""
     <html>
-    <head><title>Chatbot</title></head>
+    <head>
+        <title>Education Loan Chatbot</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f9;
+                margin: 0;
+                padding: 0;
+            }}
+            h2 {{
+                text-align: center;
+                margin-top: 20px;
+                color: #2e3b4e;
+            }}
+            .container {{
+                width: 60%;
+                margin: auto;
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }}
+            .btn {{
+                padding: 10px 20px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background-color 0.3s ease;
+            }}
+            .btn.primary {{
+                background-color: #007bff;
+            }}
+            .btn.primary:hover {{
+                background-color: #0056b3;
+            }}
+            .btn.secondary {{
+                background-color: #6c757d;
+            }}
+            .btn.secondary:hover {{
+                background-color: #5a6268;
+            }}
+            .upload-form input {{
+                padding: 10px;
+                font-size: 16px;
+                margin: 10px 0;
+                width: 100%;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }}
+            .input {{
+                padding: 10px;
+                font-size: 16px;
+                width: 100%;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }}
+            .input[type="file"] {{
+                padding: 5px;
+            }}
+            .container h3 {{
+                margin-top: 30px;
+                color: #2e3b4e;
+            }}
+            .container ul {{
+                list-style-type: none;
+                padding: 0;
+            }}
+            .container ul li {{
+                background: #f8f9fa;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 5px;
+            }}
+            /* Progress Bar */
+            .progress-bar-container {{
+                width: 100%;
+                height: 20px;
+                background-color: #e0e0e0;
+                border-radius: 10px;
+                margin-bottom: 20px;
+            }}
+            .progress-bar {{
+                height: 100%;
+                background-color: #28a745;
+                width: {progress}%;
+                border-radius: 10px;
+            }}
+        </style>
+    </head>
     <body>
         <h2>Education Loan Chatbot</h2>
-        <div style="border: 1px solid #ccc; padding: 15px; margin: 20px; border-radius: 10px;">
+        <div class="container">
+            <div class="progress-bar-container">
+                <div class="progress-bar"></div>
+            </div>
             {content}
         </div>
     </body>
     </html>
     """)
-
 
 if __name__ == '__main__':
     app.run(debug=True)
